@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Download <%= fileName %></title>
+    <style>
+      html {
+        background: linear-gradient(
+          166deg,
+          rgba(2, 0, 36, 1) 0%,
+          rgba(9, 9, 121, 1) 48%,
+          rgba(0, 212, 255, 1) 100%
+        );
+        background-repeat: no-repeat;
+        height: 100%;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+      }
+      body {
+        font-family: Arial, sans-serif;
+        text-align: center;
+        padding-top: 50px;
+      }
+      .download-btn,
+      .password-input {
+        padding: 10px 20px;
+        font-size: 16px;
+        margin: 10px;
+      }
+
+      .download-btn {
+        border: solid rgb(0, 162, 255) 2px;
+        background: none;
+        border-radius: 8px;
+        color: #fff;
+        font-weight: 600;
+        transition: 0.3s;
+        cursor: pointer;
+      }
+
+      .download-btn:hover {
+        background-color: rgb(0, 162, 255);
+        color: black;
+      }
+
+      .file-info {
+        margin-bottom: 20px;
+      }
+      #timer {
+        font-size: 20px;
+        font-weight: bold;
+        color: #ff0000;
+      }
+
+      .download-card {
+        display: flex;
+        justify-content: space-evenly;
+        background: rgb(13, 1, 44);
+        align-items: center;
+        flex-direction: column;
+        color: #fff;
+        width: 40vw;
+        height: 60vh;
+        border-radius: 25px;
+        padding: 8px;
+      }
+
+      .download-card h1 {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+
+        width: 100%;
+        height: 30%;
+      }
+
+      .download-card p {
+        font-size: larger;
+      }
+
+      .password-input {
+        background: none;
+        border: solid cyan 2px;
+        border-radius: 8px;
+        color: white;
+      }
+
+      .password-input:focus {
+        box-shadow: 0 0 5px cyan;
+      }
+
+      @media (max-width: 700px) {
+        .download-card {
+          width: 70vw;
+          height: 40vh;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="download-card">
+      <h1>Your File is Ready to Download!</h1>
+      <div class="file-info">
+        <p><strong>File Name:</strong> <%= fileName %></p>
+        <p><strong>File Size:</strong> <%= fileSize %></p>
+        <p><strong>Link Expires in:</strong> <span id="timer"></span></p>
+      </div>
+      <img src="" alt="" />
+      <p>Click the button below to download your file.</p>
+      <% if (isProtected) { %>
+      <form id="downloadForm" onsubmit="return downloadFile(event)">
+        <input
+          type="password"
+          id="password"
+          name="password"
+          class="password-input"
+          placeholder="Enter password"
+          required
+        />
+        <button type="submit" class="download-btn">Download</button>
+      </form>
+      <% } else { %>
+      <button onclick="downloadFile()" class="download-btn">Download</button>
+      <% } %>
+    </div>
+    <script>
+      let timeRemaining = "<%= remainingTime %>";
+
+      function updateTimer() {
+        const minutes = Math.floor(timeRemaining / 60);
+        const seconds = timeRemaining % 60;
+        document.getElementById("timer").textContent = `${minutes
+          .toString()
+          .padStart(2, "0")}:${seconds.toString().padStart(2, "0")}`;
+
+        if (timeRemaining > 0) {
+          timeRemaining--;
+          setTimeout(updateTimer, 1000);
+        } else {
+          document.getElementById("timer").textContent = "Expired";
+          document.querySelector(".download-btn").disabled = true;
+          document.querySelector(".download-btn").style.color = "grey";
+          document.querySelector(".download-btn").style.borderColor = "grey";
+          document.querySelector(".download-btn").style.background = "none";
+        }
+      }
+
+      updateTimer();
+
+      function downloadFile(event) {
+        if (event) event.preventDefault();
+        if (timeRemaining <= 0) {
+          alert("Sorry, the download link has expired.");
+          return false;
+        }
+        const password = document.getElementById("password")
+          ? document.getElementById("password").value
+          : "";
+        const url =
+          "/file/<%= fileId %>" +
+          (password ? `?password=${encodeURIComponent(password)}` : "");
+
+        fetch(url, {
+          method: "GET",
+        })
+          .then((response) => {
+            if (response.ok) return response.blob();
+            throw new Error("Password incorrect or download failed");
+          })
+          .then((blob) => {
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement("a");
+            a.style.display = "none";
+            a.href = url;
+            a.download = "<%= fileName %>";
+            document.body.appendChild(a);
+            a.click();
+            window.URL.revokeObjectURL(url);
+          })
+          .catch((error) => alert(error.message));
+
+        return false;
+      }
+    </script>
+  </body>
+</html>
